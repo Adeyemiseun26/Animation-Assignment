@@ -1,0 +1,776 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Blender Portfolio</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #0b0e14;
+    color: white;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+}
+
+header {
+    padding: 22px 5%;
+    border-bottom: 1px solid #252b38;
+}
+
+header h1 {
+    font-size: 23px;
+}
+
+header p {
+    color: #929bad;
+    margin-top: 6px;
+    font-size: 13px;
+}
+
+main {
+    padding: 25px 5%;
+    max-width: 1600px;
+    margin: auto;
+}
+
+.section-heading {
+    margin-bottom: 15px;
+}
+
+.section-heading h2 {
+    font-size: 19px;
+}
+
+.section-heading p {
+    color: #929bad;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+#gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 14px;
+    margin-bottom: 25px;
+}
+
+.project-card {
+    background: #151b27;
+    border: 1px solid #283142;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.project-card:hover {
+    transform: translateY(-4px);
+    border-color: #638cff;
+}
+
+.project-card.active {
+    border: 2px solid #638cff;
+}
+
+.project-card img {
+    width: 100%;
+    height: 115px;
+    object-fit: cover;
+    display: block;
+    background: #202838;
+}
+
+.project-info {
+    padding: 12px;
+}
+
+.project-info h3 {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.project-info p {
+    font-size: 11px;
+    color: #929bad;
+}
+
+.viewer-section {
+    background: #151b27;
+    border: 1px solid #283142;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.viewer-header {
+    padding: 17px 20px;
+    border-bottom: 1px solid #283142;
+}
+
+.viewer-header h2 {
+    font-size: 17px;
+}
+
+.viewer-header p {
+    font-size: 12px;
+    color: #929bad;
+    margin-top: 5px;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 13px 20px;
+    background: #111722;
+    border-bottom: 1px solid #283142;
+}
+
+.controls select,
+.controls button {
+    background: #202838;
+    color: white;
+    border: 1px solid #364258;
+    border-radius: 6px;
+    padding: 9px 12px;
+}
+
+.controls button {
+    cursor: pointer;
+}
+
+.controls input {
+    accent-color: #638cff;
+}
+
+.controls label {
+    font-size: 12px;
+    color: #b5bfd0;
+}
+
+#fullscreenBtn {
+    margin-left: auto;
+    background: #638cff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+#viewer {
+    position: relative;
+    width: 100%;
+    height: 600px;
+    background: #10141f;
+    overflow: hidden;
+}
+
+#viewer canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#viewer:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    background: #10141f;
+}
+
+#viewer:fullscreen canvas {
+    width: 100%;
+    height: 100%;
+}
+
+#loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #929bad;
+    pointer-events: none;
+    z-index: 2;
+}
+
+@media (max-width: 600px) {
+    main {
+        padding: 18px 4%;
+    }
+
+    #gallery {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #viewer {
+        height: 420px;
+    }
+
+    .controls {
+        gap: 9px;
+    }
+}
+</style>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+}
+</script>
+</head>
+
+<body>
+
+<header>
+    <h1>CPE505 Animation Assignment</h1>
+    <p>Adeyemi Oluwaseun Daniel</p>
+    <p>CPE/2021/1074</p>
+</header>
+
+<main>
+
+    <div class="section-heading">
+        <h2>Animations and Models</h2>
+        <p>Select a model to view its interactive 3D animation.</p>
+    </div>
+
+    <div id="gallery"></div>
+
+    <section class="viewer-section">
+
+        <div class="viewer-header">
+            <h2 id="modelTitle">Loading Model...</h2>
+            <p id="modelDescription">Interactive 3D preview</p>
+        </div>
+
+        <div class="controls">
+
+            <label for="animationSelect">Animation:</label>
+
+            <select id="animationSelect">
+                <option value="-1">No animation</option>
+            </select>
+
+            <button id="playPauseBtn">Pause</button>
+
+            <label for="speedSlider">Speed:</label>
+
+            <input type="range"
+                   id="speedSlider"
+                   min="0.1"
+                   max="2"
+                   step="0.1"
+                   value="1">
+
+            <span id="speedValue">1x</span>
+
+            <button id="fullscreenBtn">Fullscreen</button>
+
+        </div>
+
+        <div id="viewer">
+            <div id="loading">Loading 3D model...</div>
+        </div>
+
+    </section>
+
+</main>
+
+<script type="module">
+
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+const projects = [
+    {
+        name: "Car Animation",
+        description: "A rotating 3D car model",
+        model: "models/car.glb",
+        thumbnail: "thumbnails/car.jpg"
+    },
+    {
+        name: "Cat Animation",
+        description: "A cat chasing a mouse",
+        model: "models/cat.glb",
+        thumbnail: "thumbnails/cat.jpg"
+    },
+   
+];
+
+const viewer = document.getElementById("viewer");
+const gallery = document.getElementById("gallery");
+const loading = document.getElementById("loading");
+
+const modelTitle = document.getElementById("modelTitle");
+const modelDescription = document.getElementById("modelDescription");
+
+const animationSelect = document.getElementById("animationSelect");
+const playPauseBtn = document.getElementById("playPauseBtn");
+const speedSlider = document.getElementById("speedSlider");
+const speedValue = document.getElementById("speedValue");
+
+const loader = new GLTFLoader();
+
+let currentModel = null;
+let mixer = null;
+let actions = [];
+let activeActions = [];
+
+let isPlaying = true;
+let currentSpeed = 1;
+let requestId = 0;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x10141f);
+
+const camera = new THREE.PerspectiveCamera(
+    45,
+    viewer.clientWidth / viewer.clientHeight,
+    0.01,
+    10000
+);
+
+camera.position.set(4, 3, 5);
+
+const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: false
+});
+
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
+
+viewer.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+
+scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 2);
+keyLight.position.set(5, 10, 7);
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0x638cff, 0.8);
+fillLight.position.set(-5, 3, -5);
+scene.add(fillLight);
+
+const grid = new THREE.GridHelper(20, 40, 0x34415a, 0x202a3a);
+scene.add(grid);
+
+// PROJECT GALLERY
+
+projects.forEach((project, index) => {
+
+    const card = document.createElement("div");
+    card.className = "project-card";
+
+    card.innerHTML = `
+        <img src="${project.thumbnail}" alt="${project.name}">
+        <div class="project-info">
+            <h3>${project.name}</h3>
+            <p>${project.description}</p>
+        </div>
+    `;
+
+    card.addEventListener("click", () => {
+
+        document.querySelectorAll(".project-card").forEach(item => {
+            item.classList.remove("active");
+        });
+
+        card.classList.add("active");
+
+        loadModel(index);
+
+    });
+
+    gallery.appendChild(card);
+
+});
+
+// CLEAR MODEL
+
+function clearCurrentModel() {
+
+    if (mixer) {
+        mixer.stopAllAction();
+        mixer.uncacheRoot(currentModel);
+    }
+
+    if (currentModel) {
+
+        scene.remove(currentModel);
+
+        currentModel.traverse(object => {
+
+            if (object.isMesh) {
+
+                object.geometry?.dispose();
+
+                if (Array.isArray(object.material)) {
+                    object.material.forEach(material => material.dispose());
+                } else {
+                    object.material?.dispose();
+                }
+
+            }
+
+        });
+
+        currentModel = null;
+    }
+
+    mixer = null;
+    actions = [];
+    activeActions = [];
+
+    animationSelect.innerHTML =
+        '<option value="-1">No animation</option>';
+
+    playPauseBtn.textContent = "Pause";
+    isPlaying = true;
+}
+
+// CAMERA FRAMING
+
+function frameModel(model) {
+
+    const modelBox = new THREE.Box3();
+    const meshBox = new THREE.Box3();
+
+    let foundMesh = false;
+
+    model.updateMatrixWorld(true);
+
+    model.traverse(object => {
+
+        if (!object.isMesh) return;
+
+        const name = object.name.toLowerCase();
+
+        if (
+            name.includes("ground") ||
+            name.includes("floor") ||
+            name.includes("plane")
+        ) return;
+
+        meshBox.setFromObject(object);
+
+        if (!meshBox.isEmpty()) {
+            modelBox.union(meshBox);
+            foundMesh = true;
+        }
+
+    });
+
+    if (!foundMesh) {
+        modelBox.setFromObject(model);
+    }
+
+    const center = modelBox.getCenter(new THREE.Vector3());
+    const size = modelBox.getSize(new THREE.Vector3());
+
+    model.position.sub(center);
+    model.updateMatrixWorld(true);
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    const fov = THREE.MathUtils.degToRad(camera.fov);
+
+    const distance =
+        (maxDim / (2 * Math.tan(fov / 2))) * 1.35;
+
+    const safeDistance = Math.max(distance, 0.5);
+
+    camera.position.set(
+        safeDistance,
+        safeDistance * 0.55,
+        safeDistance
+    );
+
+    camera.near = Math.max(maxDim / 1000, 0.001);
+    camera.far = Math.max(maxDim * 100, 100);
+
+    camera.updateProjectionMatrix();
+
+    controls.target.set(0, 0, 0);
+
+    controls.minDistance = Math.max(maxDim * 0.05, 0.1);
+    controls.maxDistance = Math.max(maxDim * 10, 10);
+
+    controls.update();
+}
+
+// LOAD MODEL
+
+function loadModel(index) {
+
+    const thisRequest = ++requestId;
+    const project = projects[index];
+
+    clearCurrentModel();
+
+    modelTitle.textContent = project.name;
+    modelDescription.textContent = project.description;
+
+    loading.style.display = "flex";
+    loading.textContent = "Loading 3D model...";
+
+    loader.load(
+
+        project.model,
+
+        gltf => {
+
+            if (thisRequest !== requestId) return;
+
+            currentModel = gltf.scene;
+            scene.add(currentModel);
+
+            frameModel(currentModel);
+
+            if (gltf.animations.length > 0) {
+
+                mixer = new THREE.AnimationMixer(currentModel);
+
+                gltf.animations.forEach((clip, clipIndex) => {
+
+                    const action = mixer.clipAction(clip);
+
+                    actions.push(action);
+
+                    const option = document.createElement("option");
+
+                    option.value = clipIndex;
+                    option.textContent =
+                        clip.name || `Animation ${clipIndex + 1}`;
+
+                    animationSelect.appendChild(option);
+
+                });
+
+                // Option to play every animation together
+                const allOption = document.createElement("option");
+
+                allOption.value = "all";
+                allOption.textContent = "All Animations";
+
+                animationSelect.appendChild(allOption);
+
+                // Automatically play all clips together.
+                // This allows separate cat and mouse animations
+                // to run at the same time.
+
+                animationSelect.value = "all";
+                playAnimation("all");
+
+            }
+
+            loading.style.display = "none";
+
+        },
+
+        undefined,
+
+        error => {
+
+            if (thisRequest !== requestId) return;
+
+            console.error(error);
+
+            loading.textContent =
+                "Unable to load model. Check the file path.";
+
+        }
+
+    );
+
+}
+
+// ANIMATION SYSTEM
+
+function playAnimation(index) {
+
+    if (!mixer || actions.length === 0) return;
+
+    // Stop every previously playing action
+    actions.forEach(action => {
+        action.stop();
+    });
+
+    activeActions = [];
+
+    // Play all clips together
+    if (index === "all") {
+
+        actions.forEach(action => {
+
+            action.reset();
+            action.setLoop(THREE.LoopRepeat, Infinity);
+            action.play();
+
+            activeActions.push(action);
+
+        });
+
+    }
+
+    // Play only the selected clip
+    else {
+
+        const selectedAction = actions[Number(index)];
+
+        if (!selectedAction) return;
+
+        selectedAction.reset();
+        selectedAction.setLoop(THREE.LoopRepeat, Infinity);
+        selectedAction.play();
+
+        activeActions.push(selectedAction);
+
+    }
+
+    isPlaying = true;
+    mixer.timeScale = currentSpeed;
+
+    playPauseBtn.textContent = "Pause";
+
+}
+
+// ANIMATION DROPDOWN
+
+animationSelect.addEventListener("change", () => {
+
+    const value = animationSelect.value;
+
+    if (value === "-1") {
+
+        if (mixer) {
+            mixer.stopAllAction();
+        }
+
+        activeActions = [];
+        isPlaying = false;
+        playPauseBtn.textContent = "Play";
+
+        return;
+    }
+
+    playAnimation(value === "all" ? "all" : Number(value));
+
+});
+
+// PLAY AND PAUSE
+
+playPauseBtn.addEventListener("click", () => {
+
+    if (!mixer || activeActions.length === 0) return;
+
+    isPlaying = !isPlaying;
+
+    mixer.timeScale = isPlaying ? currentSpeed : 0;
+
+    playPauseBtn.textContent = isPlaying ? "Pause" : "Play";
+
+});
+
+// PLAYBACK SPEED
+
+speedSlider.addEventListener("input", () => {
+
+    currentSpeed = Number(speedSlider.value);
+
+    speedValue.textContent = currentSpeed.toFixed(1) + "x";
+
+    if (mixer && isPlaying) {
+        mixer.timeScale = currentSpeed;
+    }
+
+});
+
+// FULLSCREEN
+
+document.getElementById("fullscreenBtn").addEventListener("click", () => {
+
+    if (!document.fullscreenElement) {
+        viewer.requestFullscreen().catch(console.error);
+    } else {
+        document.exitFullscreen();
+    }
+
+});
+
+// RESIZE
+
+function resizeRenderer() {
+
+    requestAnimationFrame(() => {
+
+        const width = viewer.clientWidth;
+        const height = viewer.clientHeight;
+
+        if (!width || !height) return;
+
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(width, height);
+
+    });
+
+}
+
+document.addEventListener("fullscreenchange", resizeRenderer);
+window.addEventListener("resize", resizeRenderer);
+
+// RENDER LOOP
+
+const clock = new THREE.Clock();
+
+function animate() {
+
+    requestAnimationFrame(animate);
+
+    const delta = clock.getDelta();
+
+    if (mixer) {
+        mixer.update(delta);
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+
+}
+
+animate();
+
+// INITIAL MODEL
+
+document.querySelector(".project-card")?.classList.add("active");
+
+loadModel(0);
+
+</script>
+
+</body>
+</html>
